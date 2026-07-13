@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>酒馆 · 聊天记录查看器</title>
+    <style>
+        /* ===== 基础样式 ===== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #0d0c0a;
+            color: #e8e0d8;
+            font-family: system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+        .container {
+            max-width: 960px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+        .title-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .title-left h1 {
+            font-weight: 500;
+            font-size: 1.8rem;
+        }
+        .title-left h1 small {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #a0907e;
+            margin-left: 8px;
+        }
+        .palette-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            line-height: 1;
+        }
+        .palette-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .palette-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 5000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .palette-overlay.show {
+            display: flex;
+        }
+        .palette-box {
+            background: #1a1715;
+            border: 1px solid #2a2420;
+            border-radius: 14px;
+            padding: 28px 34px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .palette-box h3 {
+            font-weight: 500;
+            font-size: 1.2rem;
+            color: #e8ddd0;
+            margin-bottom: 4px;
+        }
+        .palette-box .sub {
+            color: #6a5e4e;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+        }
+        .palette-box .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: stretch;
+        }
+        .palette-box .btn {
+            display: block;
+            width: 100%;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid #3f3730;
+            background: transparent;
+            color: #b0a090;
+            transition: 0.2s;
+            text-align: center;
+        }
+        .palette-box .btn:hover {
+            border-color: #7a6856;
+            color: #ddd0c0;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .palette-box .btn-primary {
+            background: #3d342c;
+            color: #e8ddd0;
+            border-color: #564b40;
+        }
+        .palette-box .btn-primary:hover {
+            background: #55483c;
+            border-color: #7a6856;
+        }
+        .palette-box .btn-danger:hover {
+            border-color: #8a4a3a;
+            color: #e07060;
+        }
+        .palette-box .btn-success {
+            background: #2a4a3a;
+            color: #d0e8d0;
+            border-color: #3a5a4a;
+        }
+        .palette-box .btn-success:hover {
+            background: #3a5a4a;
+            border-color: #4a6a5a;
+        }
+        .palette-box .btn-close {
+            margin-top: 4px;
+            border-color: transparent;
+            color: #5a4e3e;
+            font-size: 0.85rem;
+        }
+        .palette-box .btn-close:hover {
+            border-color: #3f3730;
+            color: #8a7e6e;
+        }
+        .palette-box .btn input {
+            display: none;
+        }
+
+        /* 主题列表 */
+        .theme-list {
+            margin: 12px 0;
+            text-align: left;
+            border-top: 1px solid #2a2420;
+            padding-top: 12px;
+        }
+        .theme-list .theme-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 2px;
+        }
+        .theme-list .theme-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .theme-list .theme-item.active {
+            background: rgba(255, 255, 255, 0.08);
+            border-left: 3px solid #c4a882;
+        }
+        .theme-list .theme-item .name {
+            color: #c8bdb0;
+            font-size: 0.9rem;
+            flex: 1;
+            cursor: text;
+            padding: 2px 4px;
+            border-radius: 4px;
+            outline: none;
+            min-width: 40px;
+        }
+        .theme-list .theme-item .name:focus {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid #564b40;
+        }
+        .theme-list .theme-item .name .active-badge {
+            color: #6a5e4e;
+            font-size: 0.65rem;
+            margin-left: 8px;
+        }
+        .theme-list .theme-item .del-btn {
+            background: none;
+            border: none;
+            color: #5a4e3e;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-left: 4px;
+        }
+        .theme-list .theme-item .del-btn:hover {
+            color: #e07060;
+            background: rgba(224, 112, 96, 0.15);
+        }
+        .theme-list .empty-text {
+            color: #5a4e3e;
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 12px 0;
+        }
+        .theme-list .rename-hint {
+            color: #5a4e3e;
+            font-size: 0.6rem;
+            font-style: italic;
+            margin-left: 8px;
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 2rem;
+            padding: 0.8rem 0;
+            align-items: center;
+            border-bottom: 1px solid #2a2420;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .btn {
+            padding: 6px 18px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid #3f3730;
+            background: transparent;
+            color: #b0a090;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+        .btn:hover {
+            border-color: #7a6856;
+            color: #ddd0c0;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .btn-primary {
+            background: #3d342c;
+            color: #e8ddd0;
+            border-color: #564b40;
+        }
+        .btn-primary:hover {
+            background: #55483c;
+            border-color: #7a6856;
+        }
+        .btn-danger:hover {
+            border-color: #8a4a3a;
+            color: #e07060;
+        }
+        .btn input {
+            display: none;
+        }
+
+        /* 侧边栏 */
+        .sidebar-toggle {
+            background: transparent;
+            border: none;
+            color: #e8ddd0;
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0 4px 0 0;
+        }
+        .sidebar-toggle .badge {
+            background: #5f4d3b;
+            border-radius: 30px;
+            padding: 1px 8px;
+            font-size: 0.6rem;
+            color: #f0e4d4;
+            margin-left: 4px;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 340px;
+            height: 100%;
+            background: #0d0c0a;
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+            z-index: 999;
+            padding: 20px 0;
+            overflow-y: auto;
+            border-right: 1px solid #2a2420;
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        .sidebar-header {
+            padding: 0 20px 16px 20px;
+            border-bottom: 1px solid #2a2420;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar-header h2 {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #d6c8b8;
+        }
+        .sidebar-close {
+            background: none;
+            border: none;
+            color: #6a5e4e;
+            font-size: 1.4rem;
+            cursor: pointer;
+        }
+        .sidebar-close:hover {
+            color: #e8ddd0;
+        }
+        .sidebar-body {
+            padding: 12px 16px;
+        }
+        .sidebar-item {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #b0a090;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-item:hover {
+            background: #1a1715;
+        }
+        .sidebar-item.active {
+            background: #3d342c;
+            color: #f0e4d4;
+        }
+        .sidebar-item .badge {
+            font-size: 0.6rem;
+            color: #6a5e4e;
+            background: #1a1715;
+            padding: 0 8px;
+            border-radius: 30px;
+            border: 1px solid #2a2420;
+            flex-shrink: 0;
+        }
+        .sidebar-item .del-btn {
+            background: none;
+            border: none;
+            color: #6a5e4e;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .sidebar-item .del-btn:hover {
+            color: #e07060;
+            background: rgba(224, 112, 96, 0.15);
+        }
+        .sidebar-item .name-wrap {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .sidebar-role-group {
+            margin-bottom: 4px;
+        }
+        .sidebar-role-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #d6c8b8;
+            user-select: none;
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid #1a1715;
+            font-weight: 600;
+        }
+        .sidebar-role-header:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+        .sidebar-role-header .arrow {
+            font-size: 0.6rem;
+            transition: transform 0.25s;
+            color: #6a5e4e;
+            display: inline-block;
+        }
+        .sidebar-role-header .arrow.open {
+            transform: rotate(90deg);
+        }
+        .sidebar-role-header .count {
+            margin-left: auto;
+            background: #1a1715;
+            padding: 0 10px;
+            border-radius: 30px;
+            font-size: 0.6rem;
+            color: #8a7e6e;
+            border: 1px solid #2a2420;
+        }
+        .sidebar-role-items {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease;
+            padding-left: 16px;
+        }
+        .sidebar-role-items.open {
+            max-height: 800px;
+        }
+        .sidebar-role-items .sidebar-item {
+            font-size: 0.8rem;
+            padding: 4px 12px 4px 8px;
+        }
+        .sidebar-all-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #d6c8b8;
+            user-select: none;
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid #1a1715;
+            font-weight: 700;
+        }
+        .sidebar-all-header:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+        .sidebar-all-header .count {
+            margin-left: auto;
+            background: #1a1715;
+            padding: 0 10px;
+            border-radius: 30px;
+            font-size: 0.6rem;
+            color: #8a7e6e;
+            border: 1px solid #2a2420;
+        }
+        .sidebar-all-items {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease;
+            padding-left: 0px;
+        }
+        .sidebar-all-items.open {
+            max-height: 2000px;
+        }
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .sidebar-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 消息列表 */
+        .message-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-height: 620px;
+            overflow-y: auto;
+            padding: 4px 0;
+            scroll-behavior: smooth;
+        }
+        .message-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .message-list::-webkit-scrollbar-track {
+            background: #0d0c0a;
+        }
+        .message-list::-webkit-scrollbar-thumb {
+            background: #2a2420;
+            border-radius: 4px;
+        }
+        .msg-row {
+            display: flex;
+            flex-direction: column;
+            padding: 6px 12px 8px 12px;
+            border-radius: 4px;
+            width: 100%;
+            position: relative;
+        }
+        .msg-row.left {
+            align-items: flex-start;
+            text-align: left;
+        }
+        .msg-row.right {
+            align-items: flex-end;
+            text-align: right;
+        }
+        .msg-row.system {
+            align-items: center;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 20px;
+            margin: 4px 0;
+            opacity: 0.7;
+        }
+        .msg-row.system .msg-meta {
+            display: none;
+        }
+        .msg-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 6px 12px;
+            font-size: 0.8rem;
+            color: #8a7e6e;
+            margin-bottom: 1px;
+        }
+        .msg-row.left .msg-meta {
+            flex-direction: row;
+        }
+        .msg-row.right .msg-meta {
+            flex-direction: row-reverse;
+        }
+        .msg-sender {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .msg-row.left .msg-sender {
+            color: #e4c9b0;
+        }
+        .msg-row.right .msg-sender {
+            color: #d4b89a;
+        }
+        .msg-time {
+            font-size: 0.7rem;
+            color: #6a5e4e;
+        }
+        .msg-tag {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 40px;
+            padding: 0 10px;
+            font-size: 0.65rem;
+            color: #9a8c7c;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .msg-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.7;
+            font-size: 0.95rem;
+            color: #dad0c4;
+            max-width: 100%;
+            padding: 1px 0;
+        }
+        .msg-row.left .msg-content {
+            text-align: left;
+        }
+        .msg-row.right .msg-content {
+            text-align: right;
+        }
+        .msg-content .jn-status {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-top: 6px;
+            font-size: 0.85rem;
+            color: #b8aa98;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            white-space: pre-wrap;
+            text-align: left;
+        }
+        .think-toggle-label {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: #b0a090;
+            padding: 2px 14px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .think-toggle-label:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ddd0c0;
+        }
+        .think-content {
+            display: none;
+            color: #9a8c7c;
+            font-size: 0.85rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-top: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            white-space: pre-wrap;
+            text-align: left;
+        }
+        .think-content.show {
+            display: block;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 70px 20px;
+            color: #6a5e4e;
+        }
+        .empty-state .icon {
+            font-size: 3.4rem;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+        .empty-state p {
+            font-size: 1rem;
+            max-width: 380px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1715;
+            color: #e8ddd0;
+            padding: 10px 28px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            border: 1px solid #2a2420;
+            transition: opacity 0.25s;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 3000;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 4000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-box {
+            background: #1a1715;
+            border: 1px solid #2a2420;
+            border-radius: 12px;
+            padding: 28px 32px;
+            max-width: 420px;
+            width: 90%;
+        }
+        .modal-box h3 {
+            font-weight: 500;
+            font-size: 1.1rem;
+            color: #e8ddd0;
+            margin-bottom: 8px;
+        }
+        .modal-box p {
+            color: #b0a090;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .modal-box .btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .modal-box .btn-row .btn {
+            padding: 6px 20px;
+        }
+
+        /* ===== 右下角导航：透明边框 ===== */
+        .nav-corner {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+        }
+        .nav-corner.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .nav-corner .nav-btn {
+            width: 52px;
+            height: 34px;
+            border-radius: 6px;
+            border: 1px solid #b0a090;
+            background: transparent;
+            color: #b0a090;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            letter-spacing: 0.5px;
+            font-family: inherit;
+        }
+        .nav-corner .nav-btn:hover {
+            border-color: #d0c8c0;
+            color: #d0c8c0;
+            transform: scale(1.04);
+        }
+        .nav-corner .nav-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* 跳页弹窗 */
+        .goto-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 6000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .goto-overlay.show {
+            display: flex;
+        }
+        .goto-box {
+            background: #1a1715;
+            border: 1px solid #2a2420;
+            border-radius: 12px;
+            padding: 24px 30px;
+            max-width: 320px;
+            width: 90%;
+            text-align: center;
+        }
+        .goto-box h3 {
+            font-weight: 500;
+            font-size: 1rem;
+            color: #e8ddd0;
+            margin-bottom: 4px;
+        }
+        .goto-box .sub {
+            color: #6a5e4e;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+        }
+        .goto-box .goto-input {
+            width: 80px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #3f3730;
+            background: #0d0c0a;
+            color: #e8ddd0;
+            font-size: 1.1rem;
+            text-align: center;
+            margin: 0 auto 16px;
+            display: block;
+            outline: none;
+        }
+        .goto-box .goto-input:focus {
+            border-color: #7a6856;
+        }
+        .goto-box .btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .goto-box .btn-row .btn {
+            padding: 6px 24px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid #3f3730;
+            background: transparent;
+            color: #b0a090;
+            transition: 0.2s;
+        }
+        .goto-box .btn-row .btn:hover {
+            border-color: #7a6856;
+            color: #ddd0c0;
+        }
+        .goto-box .btn-row .btn-primary {
+            background: #3d342c;
+            color: #e8ddd0;
+            border-color: #564b40;
+        }
+        .goto-box .btn-row .btn-primary:hover {
+            background: #55483c;
+            border-color: #7a6856;
+        }
+
+        /* ===== 页码信息：无黑线 ===== */
+        .page-info {
+            text-align: center;
+            color: #6a5e4e;
+            font-size: 0.75rem;
+            padding: 6px 0;
+        }
+        .page-info-top {
+            padding-bottom: 6px;
+        }
+        .page-info-bottom {
+            padding-top: 6px;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem 0.8rem;
+            }
+            .title-left h1 {
+                font-size: 1.3rem;
+                flex-wrap: wrap;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .btn-group {
+                justify-content: center;
+            }
+            .btn {
+                padding: 6px 14px;
+                font-size: 0.8rem;
+                flex: 1;
+                text-align: center;
+            }
+            .sidebar {
+                width: 280px;
+            }
+            .modal-box {
+                padding: 20px;
+            }
+            .palette-box {
+                padding: 20px;
+            }
+            .nav-corner {
+                bottom: 16px;
+                right: 16px;
+            }
+            .nav-corner .nav-btn {
+                width: 44px;
+                height: 30px;
+                font-size: 0.65rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="title-row">
+            <div class="title-left">
+                <button class="sidebar-toggle" id="sidebarToggle">🌸<span class="badge" id="fileCountBadge">0</span></button>
+                <h1>酒馆 <small>聊天记录查看器</small></h1>
+            </div>
+            <button class="palette-btn" id="paletteBtn" title="主题美化">🎨</button>
+        </div>
+
+        <div class="toolbar">
+            <div class="btn-group">
+                <label class="btn btn-primary" id="importBtn">
+                    📂 导入
+                    <input type="file" id="fileInput" accept=".json,.txt,.jsonl" multiple />
+                </label>
+                <button class="btn" id="exportBtn">⬇️ 导出</button>
+                <button class="btn btn-danger" id="clearBtn">🗑️ 清空</button>
+            </div>
+        </div>
+
+        <div id="messageContainer">
+            <div class="empty-state" id="emptyState">
+                <div class="icon">📜</div>
+                <p>点击「导入」上传酒馆导出的 <strong>.txt / .jsonl</strong> 文件</p>
+            </div>
+            <div class="message-list" id="messageList" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- ===== 🎨 调色盘弹窗 ===== -->
+    <div class="palette-overlay" id="paletteOverlay">
+        <div class="palette-box">
+            <h3>🎨 主题美化</h3>
+            <div class="sub">导入 / 切换 / 管理 主题样式</div>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="paletteImportBtn">📂 导入主题</button>
+                <input type="file" id="paletteFileInput" accept=".css" style="display:none;">
+                <button class="btn btn-success" id="paletteExportBtn">⬇️ 导出当前主题</button>
+                <div class="theme-list" id="themeList">
+                    <div class="empty-text">暂无主题，导入一个吧</div>
+                </div>
+                <button class="btn btn-close" id="paletteCloseBtn">✕ 关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 右下角导航 ===== -->
+    <div class="nav-corner" id="navCorner">
+        <button class="nav-btn" id="gotoTopBtn" title="回到顶部">顶部</button>
+        <button class="nav-btn" id="gotoBottomBtn" title="回到底部">回底</button>
+        <button class="nav-btn" id="gotoPageBtn" title="跳转页码">跳转</button>
+    </div>
+
+    <!-- ===== 跳页弹窗 ===== -->
+    <div class="goto-overlay" id="gotoOverlay">
+        <div class="goto-box">
+            <h3>📄 跳转到页码</h3>
+            <div class="sub" id="gotoInfo">共 0 页</div>
+            <input type="number" class="goto-input" id="gotoInput" min="1" placeholder="页码" />
+            <div class="btn-row">
+                <button class="btn" id="gotoCancelBtn">取消</button>
+                <button class="btn btn-primary" id="gotoConfirmBtn">跳转</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>📂 文件</h2>
+            <button class="sidebar-close" id="sidebarClose">✕</button>
+        </div>
+        <div class="sidebar-body" id="sidebarBody"></div>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box">
+            <h3 id="modalTitle">确认删除</h3>
+            <p id="modalDesc">确定要删除这个文件吗？</p>
+            <div class="btn-row">
+                <button class="btn" id="modalCancel">取消</button>
+                <button class="btn btn-danger" id="modalConfirm">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const DB_NAME = 'SillyTavernChatDB';
+            const STORE_NAME = 'chatData';
+            const THEME_STORE = 'themes';
+            const CONFIG_STORE = 'config';
+            const DB_VERSION = 3;
+
+            let db = null;
+            let allFileEntries = [];
+            let allMessages = [];
+            let currentFilter = 'all';
+            let nextId = 1;
+            let isSaving = false;
+            let saveQueue = [];
+            let pendingDeleteId = null;
+
+            const PAGE_SIZE = 50;
+            let currentPage = 1;
+            let totalPages = 1;
+
+            let themes = [];
+            let currentThemeId = null;
+
+            const $ = id => document.getElementById(id);
+
+            function showToast(msg, duration = 2500) {
+                const el = $('toast');
+                el.textContent = msg;
+                el.classList.add('show');
+                clearTimeout(el._timer);
+                el._timer = setTimeout(() => el.classList.remove('show'), duration);
+            }
+
+            // ===== IndexedDB =====
+            function initDB() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+                    request.onupgradeneeded = function(e) {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(STORE_NAME)) {
+                            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        }
+                        if (!db.objectStoreNames.contains(THEME_STORE)) {
+                            const store = db.createObjectStore(THEME_STORE, { keyPath: 'id' });
+                            store.createIndex('name', 'name', { unique: false });
+                        }
+                        if (!db.objectStoreNames.contains(CONFIG_STORE)) {
+                            db.createObjectStore(CONFIG_STORE, { keyPath: 'key' });
+                        }
+                    };
+                    request.onsuccess = function(e) {
+                        db = e.target.result;
+                        resolve(db);
+                    };
+                    request.onerror = function(e) {
+                        reject(e.target.error);
+                    };
+                });
+            }
+
+            function saveConfig(key, value) {
+                return new Promise((resolve, reject) => {
+                    if (!db) { reject(new Error('数据库未初始化'));
+                        return; }
+                    const transaction = db.transaction([CONFIG_STORE], 'readwrite');
+                    const store = transaction.objectStore(CONFIG_STORE);
+                    store.put({ key: key, value: value });
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = (e) => reject(e.target.error);
+                });
+            }
+
+            function loadConfig(key) {
+                return new Promise((resolve, reject) => {
+                    if (!db) { reject(new Error('数据库未初始化'));
+                        return; }
+                    const transaction = db.transaction([CONFIG_STORE], 'readonly');
+                    const store = transaction.objectStore(CONFIG_STORE);
+                    const request = store.get(key);
+                    request.onsuccess = (e) => resolve(e.target.result ? e.target.result.value : null);
+                    request.onerror = (e) => reject(e.target.error);
+                });
+            }
+
+            function saveThemesToDB() {
+                return new Promise((resolve, reject) => {
+                    if (!db) { reject(new Error('数据库未初始化'));
+                        return; }
+                    const transaction = db.transaction([THEME_STORE], 'readwrite');
+                    const store = transaction.objectStore(THEME_STORE);
+                    store.clear();
+                    for (const theme of themes) store.put(theme);
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = (e) => reject(e.target.error);
+                });
+            }
+
+            function loadThemesFromDB() {
+                return new Promise((resolve, reject) => {
+                    if (!db) { reject(new Error('数据库未初始化'));
+                        return; }
+                    const transaction = db.transaction([THEME_STORE], 'readonly');
+                    const store = transaction.objectStore(THEME_STORE);
+                    const request = store.getAll();
+                    request.onsuccess = (e) => {
+                        themes = e.target.result || [];
+                        themes.sort((a, b) => a.id - b.id);
+                        resolve(themes);
+                    };
+                    request.onerror = (e) => reject(e.target.error);
+                });
+            }
+
+            // ===== 主题应用 =====
+            function applyTheme(themeId) {
+                const theme = themes.find(t => t.id === themeId);
+                const old = document.getElementById('theme-style');
+                if (old) old.remove();
+                if (!theme) {
+                    currentThemeId = null;
+                    renderThemeList();
+                    saveConfig('currentThemeId', null);
+                    applyNavButtonTheme(null);
+                    return;
+                }
+                const style = document.createElement('style');
+                style.id = 'theme-style';
+                style.textContent = theme.css;
+                document.head.appendChild(style);
+                currentThemeId = theme.id;
+                renderThemeList();
+                saveConfig('currentThemeId', theme.id);
+                applyNavButtonTheme(theme.css);
+            }
+
+            // ===== 导航按钮强制跟随文字颜色（边框=文字颜色） =====
+            function applyNavButtonTheme(css) {
+                const navBtns = document.querySelectorAll('.nav-corner .nav-btn');
+                if (!css) {
+                    navBtns.forEach(btn => {
+                        btn.style.color = '';
+                        btn.style.borderColor = '';
+                    });
+                    return;
+                }
+                const colorMatch = css.match(/color:\s*([^;]+)/);
+                const btnColor = colorMatch ? colorMatch[1].trim() : '#b0a090';
+                navBtns.forEach(btn => {
+                    btn.style.color = btnColor;
+                    btn.style.borderColor = btnColor;
+                });
+            }
+
+            function getNextThemeId() {
+                if (themes.length === 0) return 1;
+                return Math.max(...themes.map(t => t.id)) + 1;
+            }
+
+            function importThemeFromFile(file) {
+                let name = file.name.replace(/\.[^.]+$/, '');
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const css = ev.target.result;
+                    if (!css || css.trim().length === 0) {
+                        showToast('⚠️ 文件为空');
+                        return;
+                    }
+                    let finalName = name;
+                    let counter = 1;
+                    while (themes.some(t => t.name === finalName)) {
+                        finalName = name + ' (' + counter + ')';
+                        counter++;
+                    }
+                    const newTheme = {
+                        id: getNextThemeId(),
+                        name: finalName,
+                        css: css,
+                        createdAt: Date.now()
+                    };
+                    themes.push(newTheme);
+                    saveThemesToDB().then(() => {
+                        applyTheme(newTheme.id);
+                        renderThemeList();
+                        showToast('✅ 主题 "' + finalName + '" 已导入并应用');
+                        $('paletteOverlay').classList.remove('show');
+                    }).catch(e => {
+                        console.error('保存主题失败:', e);
+                        showToast('❌ 保存主题失败');
+                    });
+                };
+                reader.onerror = () => showToast('❌ 读取文件失败');
+                reader.readAsText(file);
+            }
+
+            function renameTheme(themeId) {
+                const theme = themes.find(t => t.id === themeId);
+                if (!theme) return;
+                const newName = prompt('重命名主题：', theme.name);
+                if (newName === null) return;
+                const trimmed = newName.trim();
+                if (!trimmed) { showToast('⚠️ 名称不能为空'); return; }
+                if (themes.some(t => t.name === trimmed && t.id !== themeId)) { showToast('⚠️ 已存在同名主题'); return; }
+                theme.name = trimmed;
+                saveThemesToDB().then(() => {
+                    renderThemeList();
+                    showToast('✅ 已重命名为 "' + trimmed + '"');
+                }).catch(e => {
+                    console.error('重命名失败:', e);
+                    showToast('❌ 重命名失败');
+                });
+            }
+
+            function deleteTheme(themeId) {
+                const theme = themes.find(t => t.id === themeId);
+                if (!theme) return;
+                if (!confirm('确定要删除主题 "' + theme.name + '" 吗？')) return;
+                themes = themes.filter(t => t.id !== themeId);
+                saveThemesToDB().then(() => {
+                    if (themes.length === 0) {
+                        const old = document.getElementById('theme-style');
+                        if (old) old.remove();
+                        currentThemeId = null;
+                        renderThemeList();
+                        saveConfig('currentThemeId', null);
+                        applyNavButtonTheme(null);
+                        showToast('🗑️ 已删除 "' + theme.name + '"，已恢复默认样式');
+                    } else {
+                        if (currentThemeId === themeId) applyTheme(themes[0].id);
+                        else renderThemeList();
+                        showToast('🗑️ 已删除 "' + theme.name + '"');
+                    }
+                    $('paletteOverlay').classList.remove('show');
+                }).catch(e => {
+                    console.error('删除主题失败:', e);
+                    showToast('❌ 删除主题失败');
+                });
+            }
+
+            function renderThemeList() {
+                const container = $('themeList');
+                if (!container) return;
+                if (themes.length === 0) {
+                    container.innerHTML = '<div class="empty-text">暂无主题，导入一个吧</div>';
+                    return;
+                }
+                let html = '';
+                for (const theme of themes) {
+                    const isActive = currentThemeId === theme.id;
+                    html += `
+                            <div class="theme-item ${isActive ? 'active' : ''}">
+                                <span class="name" onclick="window.applyThemeById(${theme.id})" ondblclick="window.renameThemeById(${theme.id})" title="单击切换 · 双击重命名">
+                                    ${isActive ? '●' : '○'} ${escapeHtml(theme.name)}
+                                    ${isActive ? '<span class="active-badge">使用中</span>' : ''}
+                                    <span class="rename-hint">(双击重命名)</span>
+                                </span>
+                                <button class="del-btn" onclick="event.stopPropagation(); window.deleteThemeById(${theme.id})" title="删除">✕</button>
+                            </div>
+                        `;
+                }
+                container.innerHTML = html;
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            window.applyThemeById = function(id) {
+                applyTheme(id);
+                saveThemesToDB();
+            };
+            window.deleteThemeById = function(id) {
+                deleteTheme(id);
+            };
+            window.renameThemeById = function(id) {
+                renameTheme(id);
+            };
+
+            // ===== 调色盘 =====
+            $('paletteBtn').addEventListener('click', function(e) {
+                e.stopPropagation();
+                $('paletteOverlay').classList.toggle('show');
+                renderThemeList();
+            });
+            $('paletteOverlay').addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('show');
+            });
+            $('paletteCloseBtn').addEventListener('click', function() {
+                $('paletteOverlay').classList.remove('show');
+            });
+
+            const paletteFileInput = document.getElementById('paletteFileInput');
+            const paletteImportBtn = document.getElementById('paletteImportBtn');
+            paletteImportBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                paletteFileInput.click();
+            });
+            paletteFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) { showToast('⚠️ 请选择一个 CSS 文件'); return; }
+                importThemeFromFile(file);
+                this.value = '';
+            });
+
+            document.getElementById('paletteExportBtn').addEventListener('click', function() {
+                const theme = themes.find(t => t.id === currentThemeId);
+                if (!theme || !theme.css || theme.css.trim().length === 0) {
+                    showToast('⚠️ 没有主题可导出');
+                    return;
+                }
+                const blob = new Blob([theme.css], { type: 'text/css' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${theme.name}_${new Date().toISOString().slice(0,10)}.css`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('⬇️ 主题已导出');
+                $('paletteOverlay').classList.remove('show');
+            });
+
+            // ===== 聊天数据 =====
+            function saveChatToDB() {
+                return new Promise((resolve, reject) => {
+                    saveQueue.push({ resolve, reject });
+                    if (isSaving) return;
+                    processSaveQueue();
+                });
+            }
+
+            function processSaveQueue() {
+                if (saveQueue.length === 0) { isSaving = false; return; }
+                isSaving = true;
+                const task = saveQueue[0];
+                if (!db) {
+                    task.reject(new Error('数据库未初始化'));
+                    saveQueue.shift();
+                    processSaveQueue();
+                    return;
+                }
+                const dataToSave = {
+                    id: 'mainData',
+                    entries: allFileEntries.map(entry => ({
+                        id: entry.id,
+                        name: entry.name,
+                        role: entry.role || '未分类',
+                        count: entry.count,
+                        messages: entry.messages.slice()
+                    })),
+                    filter: currentFilter,
+                    nextId: nextId,
+                    updatedAt: Date.now()
+                };
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(dataToSave);
+                request.onsuccess = function() {
+                    task.resolve();
+                    saveQueue.shift();
+                    processSaveQueue();
+                };
+                request.onerror = function(e) {
+                    task.reject(e.target.error);
+                    saveQueue.shift();
+                    processSaveQueue();
+                };
+            }
+
+            function loadChatFromDB() {
+                return new Promise((resolve, reject) => {
+                    if (!db) { reject(new Error('数据库未初始化')); return; }
+                    const transaction = db.transaction([STORE_NAME], 'readonly');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.get('mainData');
+                    request.onsuccess = function(e) {
+                        const data = e.target.result;
+                        if (!data) { resolve(null); return; }
+                        allFileEntries = data.entries || [];
+                        currentFilter = data.filter || 'all';
+                        nextId = data.nextId || 1;
+                        allMessages = [];
+                        for (const entry of allFileEntries) {
+                            if (entry.messages && Array.isArray(entry.messages)) {
+                                allMessages.push(...entry.messages);
+                            }
+                        }
+                        resolve(data);
+                    };
+                    request.onerror = function(e) { reject(e.target.error); };
+                });
+            }
+
+            // ===== 解析文件 =====
+            function parseFileContent(text) {
+                const trimmed = text.trim();
+                if (!trimmed) return [];
+                if (trimmed.startsWith('[')) {
+                    try {
+                        const arr = JSON.parse(trimmed);
+                        if (Array.isArray(arr)) {
+                            return arr
+                                .filter(item => item.mes !== undefined)
+                                .map(item => ({
+                                    name: item.name || '未知',
+                                    is_user: !!item.is_user,
+                                    is_system: !!item.is_system,
+                                    send_date: item.send_date || '',
+                                    mes: item.mes || '',
+                                    extra: item.extra || null
+                                }));
+                        }
+                    } catch (e) {}
+                }
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const results = [];
+                for (const line of lines) {
+                    try {
+                        const obj = JSON.parse(line);
+                        if (obj.mes !== undefined) {
+                            results.push({
+                                name: obj.name || '未知',
+                                is_user: !!obj.is_user,
+                                is_system: !!obj.is_system,
+                                send_date: obj.send_date || '',
+                                mes: obj.mes || '',
+                                extra: obj.extra || null
+                            });
+                        }
+                    } catch (e) {}
+                }
+                return results;
+            }
+
+            // ===== 导入聊天数据 =====
+            async function importFile(text, filename) {
+                let entries = null;
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed && typeof parsed === 'object' && parsed.entries && Array.isArray(parsed.entries)) {
+                        entries = parsed.entries;
+                    }
+                } catch (e) {}
+
+                if (entries && entries.length > 0) {
+                    let totalCount = 0;
+                    for (const entryData of entries) {
+                        if (!entryData.messages || !Array.isArray(entryData.messages)) continue;
+                        const role = entryData.role || extractRoleFromFilename(entryData.name || filename);
+                        const id = nextId++;
+                        const entry = {
+                            id: id,
+                            name: entryData.name || filename,
+                            role: role,
+                            count: entryData.messages.length,
+                            messages: entryData.messages.slice()
+                        };
+                        allFileEntries.push(entry);
+                        allMessages.push(...entryData.messages);
+                        totalCount += entryData.messages.length;
+                    }
+                    renderAll();
+                    try {
+                        await saveChatToDB();
+                        showToast(`✅ 导入 ${entries.length} 个聊天对话，共 ${totalCount} 条消息`);
+                    } catch (e) {
+                        console.error('保存失败:', e);
+                        showToast(`❌ 保存失败`);
+                    }
+                    return;
+                }
+
+                const parsed = parseFileContent(text);
+                if (parsed.length === 0) {
+                    showToast(`⚠️ "${filename}" 无有效消息`);
+                    return;
+                }
+                const role = extractRoleFromFilename(filename);
+                const id = nextId++;
+                const entry = {
+                    id: id,
+                    name: filename,
+                    role: role,
+                    count: parsed.length,
+                    messages: parsed.slice()
+                };
+                allFileEntries.push(entry);
+                allMessages.push(...parsed);
+                renderAll();
+                try {
+                    await saveChatToDB();
+                    showToast(`✅ 导入 "${filename}" (${role})，${parsed.length} 条`);
+                } catch (e) {
+                    console.error('保存失败:', e);
+                    showToast(`❌ 保存 "${filename}" 失败`);
+                }
+            }
+
+            async function importFiles(files) {
+                const total = files.length;
+                let successCount = 0;
+                showToast(`📂 正在导入 ${total} 个文件...`);
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    try {
+                        const text = await readFileAsText(file);
+                        await importFile(text, file.name);
+                        successCount++;
+                    } catch (e) {
+                        console.error(`导入 ${file.name} 失败:`, e);
+                    }
+                }
+                if (successCount === total) {
+                    showToast(`✅ 全部导入完成 (${total} 个文件)`);
+                } else {
+                    showToast(`⚠️ 导入完成，成功 ${successCount}/${total} 个文件`);
+                }
+            }
+
+            function extractRoleFromFilename(filename) {
+                let name = filename.replace(/\.[^.]+$/, '');
+                const match = name.match(/^(.+?)\s*[-_]\s*/);
+                if (match) return match[1].trim();
+                return name;
+            }
+
+            function readFileAsText(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = (e) => reject(e.target.error);
+                    reader.readAsText(file);
+                });
+            }
+
+            function deleteFile(id) {
+                const entry = allFileEntries.find(e => e.id === id);
+                if (!entry) { showToast('⚠️ 文件不存在'); return; }
+                allFileEntries = allFileEntries.filter(e => e.id !== id);
+                const msgSet = new Set(entry.messages);
+                allMessages = allMessages.filter(msg => !msgSet.has(msg));
+                if (currentFilter === `entry:${id}`) currentFilter = 'all';
+                currentPage = 1;
+                renderAll();
+                saveChatToDB();
+                showToast(`🗑️ 已删除 "${entry.name}"`);
+            }
+
+            function clearAll() {
+                if (allFileEntries.length === 0) { showToast('已经是空的了'); return; }
+                if (confirm('确定要清空所有聊天记录吗？')) {
+                    allFileEntries = [];
+                    allMessages = [];
+                    currentFilter = 'all';
+                    nextId = 1;
+                    currentPage = 1;
+                    renderAll();
+                    saveChatToDB();
+                    showToast('🗑️ 已清空全部');
+                }
+            }
+
+            function getFilteredMessages() {
+                if (currentFilter === 'all') return allMessages;
+                if (currentFilter.startsWith('entry:')) {
+                    const id = parseInt(currentFilter.replace('entry:', ''));
+                    const entry = allFileEntries.find(e => e.id === id);
+                    return entry ? entry.messages : [];
+                }
+                if (currentFilter.startsWith('role:')) {
+                    const role = currentFilter.replace('role:', '');
+                    const result = [];
+                    for (const entry of allFileEntries) {
+                        if (entry.role === role) result.push(...entry.messages);
+                    }
+                    return result;
+                }
+                return allMessages;
+            }
+
+            function sortByTime(messages) {
+                return [...messages].sort((a, b) => (a.send_date || '').localeCompare(b.send_date || ''));
+            }
+
+            // ===== 分页 =====
+            function getPaginatedMessages() {
+                const filtered = getFilteredMessages();
+                const sorted = sortByTime(filtered);
+                totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+                if (currentPage > totalPages) currentPage = totalPages;
+                const start = (currentPage - 1) * PAGE_SIZE;
+                const end = Math.min(start + PAGE_SIZE, sorted.length);
+                return {
+                    messages: sorted.slice(start, end),
+                    total: sorted.length,
+                    page: currentPage,
+                    totalPages: totalPages
+                };
+            }
+
+            function goToPage(page) {
+                const filtered = getFilteredMessages();
+                const total = filtered.length;
+                const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+                if (page < 1) page = 1;
+                if (page > maxPage) page = maxPage;
+                currentPage = page;
+                renderMessages();
+                const list = $('messageList');
+                if (list) list.scrollTop = 0;
+                document.getElementById('gotoInfo').textContent = `共 ${maxPage} 页，当前第 ${currentPage} 页`;
+                document.getElementById('gotoInput').value = currentPage;
+                document.getElementById('gotoInput').max = maxPage;
+                updateNavCorner();
+            }
+
+            function updateNavCorner() {
+                const nav = $('navCorner');
+                const filtered = getFilteredMessages();
+                if (filtered.length > PAGE_SIZE) {
+                    nav.classList.add('show');
+                } else {
+                    nav.classList.remove('show');
+                }
+            }
+
+            // ===== 渲染消息 =====
+            window._toggleThink = function(id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.toggle('show');
+                const label = el.previousElementSibling;
+                if (label && label.classList.contains('think-toggle-label')) {
+                    label.textContent = el.classList.contains('show') ? '思路(点击收起)' : '思路(点击展开)';
+                }
+            };
+
+            function renderMessages() {
+                const { messages, total, page, totalPages } = getPaginatedMessages();
+                const list = $('messageList');
+                const empty = $('emptyState');
+
+                if (total === 0) {
+                    list.style.display = 'none';
+                    empty.style.display = 'block';
+                    if (allMessages.length > 0) {
+                        empty.querySelector('p').innerHTML = '当前筛选无消息';
+                    } else {
+                        empty.querySelector('p').innerHTML = '点击「导入」上传酒馆导出的文件';
+                    }
+                    updateNavCorner();
+                    return;
+                }
+
+                empty.style.display = 'none';
+                list.style.display = 'flex';
+
+                let html = '';
+                html += `
+                        <div class="page-info page-info-top">
+                            共 ${total} 条消息 · 第 ${page}/${totalPages} 页
+                        </div>
+                    `;
+
+                for (const msg of messages) {
+                    const isUser = msg.is_user;
+                    const isSystem = msg.is_system;
+                    const senderName = msg.name || (isUser ? '用户' : '角色');
+                    const timeStr = msg.send_date ? new Date(msg.send_date).toLocaleString('zh-CN', { hour12: false }) :
+                        '——';
+                    let content = msg.mes || '';
+
+                    let statusBlock = '';
+                    const statusMatch = content.match(/<jn_status>([\s\S]*?)<\/jn_status>/);
+                    if (statusMatch) {
+                        statusBlock = statusMatch[1].trim();
+                        content = content.replace(/<jn_status>[\s\S]*?<\/jn_status>/, '').trim();
+                    }
+                    content = content.replace(/<!--[\s\S]*?-->/g, '').trim();
+
+                    const thinkRegex = /<(?:thinking|think)>([\s\S]*?)<\/(?:thinking|think)>/g;
+                    let match;
+                    const parts = [];
+                    let lastIndex = 0;
+                    while ((match = thinkRegex.exec(content)) !== null) {
+                        const inner = match[1].trim();
+                        if (match.index > lastIndex) parts.push(content.substring(lastIndex, match.index));
+                        const id = 'think-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+                        parts.push(`
+                                <span class="think-toggle-label" onclick="window._toggleThink('${id}')">思路 (点击展开)</span>
+                                <div class="think-content" id="${id}">${escapeHtml(inner)}</div>
+                            `);
+                        lastIndex = match.index + match[0].length;
+                    }
+                    if (lastIndex < content.length) parts.push(content.substring(lastIndex));
+                    content = parts.join('');
+
+                    let sideClass = 'left';
+                    let tagText = '角色';
+                    if (isSystem) { sideClass = 'system';
+                        tagText = '系统'; } else if (isUser) { sideClass = 'right';
+                        tagText = '用户'; }
+
+                    const senderEscaped = escapeHtml(senderName);
+
+                    if (isSystem) {
+                        html += `
+                                <div class="msg-row system">
+                                    <div class="msg-content">${content}</div>
+                                    <div class="msg-meta">
+                                        <span class="msg-sender" style="color:#a09080;">${senderEscaped}</span>
+                                        <span class="msg-time">${timeStr}</span>
+                                        <span class="msg-tag">系统</span>
+                                    </div>
+                                </div>
+                            `;
+                        continue;
+                    }
+
+                    const senderColor = isUser ? '#d4b89a' : '#e4c9b0';
+                    const bg = isUser ? '#1a1715' : '#161412';
+
+                    html += `
+                            <div class="msg-row ${sideClass}" style="background:${bg};">
+                                <div class="msg-meta">
+                                    <span class="msg-sender" style="color:${senderColor};">${senderEscaped}</span>
+                                    <span class="msg-time">${timeStr}</span>
+                                    <span class="msg-tag">${tagText}</span>
+                                </div>
+                                <div class="msg-content">${content}${statusBlock ? `<div class="jn-status">${escapeHtml(statusBlock)}</div>` : ''}</div>
+                            </div>
+                        `;
+                }
+
+                html += `
+                        <div class="page-info page-info-bottom">
+                            第 ${page}/${totalPages} 页 · 共 ${total} 条消息
+                        </div>
+                    `;
+
+                list.innerHTML = html;
+                updateNavCorner();
+            }
+
+            // ===== 侧边栏 =====
+            function buildSidebar() {
+                const body = $('sidebarBody');
+                const badge = $('fileCountBadge');
+                badge.textContent = allFileEntries.length;
+
+                if (allFileEntries.length === 0) {
+                    body.innerHTML = `<div style="color:#5a4e3e;padding:20px;text-align:center;">暂无文件</div>`;
+                    return;
+                }
+
+                const groups = {};
+                for (const entry of allFileEntries) {
+                    const role = entry.role || '未分类';
+                    if (!groups[role]) groups[role] = [];
+                    groups[role].push(entry);
+                }
+                const roles = Object.keys(groups).sort();
+
+                let html = '';
+                const allExpanded = true;
+                html += `
+                        <div class="sidebar-role-group">
+                            <div class="sidebar-all-header" onclick="toggleAllGroup(this)">
+                                <span>全部</span>
+                                <span class="count">${allFileEntries.length} 个文件</span>
+                            </div>
+                            <div class="sidebar-all-items ${allExpanded ? 'open' : ''}">
+                        `;
+
+                for (const role of roles) {
+                    const entries = groups[role];
+                    const roleExpanded = true;
+                    html += `
+                            <div class="sidebar-role-group">
+                                <div class="sidebar-role-header" onclick="event.stopPropagation(); toggleGroup(this)">
+                                    <span class="arrow ${roleExpanded ? 'open' : ''}">▶</span>
+                                    <span>${escapeHtml(role)}</span>
+                                    <span class="count">${entries.length} 个文件</span>
+                                </div>
+                                <div class="sidebar-role-items ${roleExpanded ? 'open' : ''}">
+                            `;
+                    const sortedEntries = [...entries].sort((a, b) => a.name.localeCompare(b.name));
+                    for (const entry of sortedEntries) {
+                        const isActive = currentFilter === `entry:${entry.id}`;
+                        const name = entry.name || `未命名_${entry.id}`;
+                        html += `
+                                <div class="sidebar-item ${isActive ? 'active' : ''}" onclick="applyFilter('entry:${entry.id}')">
+                                    <span class="name-wrap">📄 ${escapeHtml(name)}</span>
+                                    <span class="badge">${entry.count}条</span>
+                                    <button class="del-btn" onclick="event.stopPropagation(); showDeleteModal(${entry.id}, '${escapeHtml(name)}', ${entry.count})" title="删除">✕</button>
+                                </div>
+                            `;
+                    }
+                    html += `</div></div>`;
+                }
+                html += `</div></div>`;
+                body.innerHTML = html;
+            }
+
+            window.toggleAllGroup = function(header) {
+                const items = header.nextElementSibling;
+                if (items) items.classList.toggle('open');
+            };
+            window.toggleGroup = function(header) {
+                const items = header.nextElementSibling;
+                const arrow = header.querySelector('.arrow');
+                if (items) {
+                    items.classList.toggle('open');
+                    if (arrow) arrow.classList.toggle('open');
+                }
+            };
+            window.applyFilter = function(filter) {
+                currentFilter = filter;
+                currentPage = 1;
+                buildSidebar();
+                renderMessages();
+                saveChatToDB();
+                if (window.innerWidth <= 640) closeSidebar();
+            };
+
+            function showDeleteModal(id, name, count) {
+                pendingDeleteId = id;
+                $('modalTitle').textContent = '确认删除';
+                $('modalDesc').textContent = `确定要删除「${name}」吗？（包含 ${count} 条消息）`;
+                $('modalOverlay').classList.add('show');
+            }
+
+            function closeModal() {
+                $('modalOverlay').classList.remove('show');
+                pendingDeleteId = null;
+            }
+            $('modalCancel').addEventListener('click', closeModal);
+            $('modalOverlay').addEventListener('click', function(e) {
+                if (e.target === this) closeModal();
+            });
+            $('modalConfirm').addEventListener('click', function() {
+                if (pendingDeleteId !== null) {
+                    deleteFile(pendingDeleteId);
+                    pendingDeleteId = null;
+                }
+                closeModal();
+            });
+
+            function openSidebar() {
+                $('sidebar').classList.add('open');
+                $('sidebarOverlay').classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                $('sidebar').classList.remove('open');
+                $('sidebarOverlay').classList.remove('show');
+                document.body.style.overflow = '';
+            }
+            $('sidebarToggle').addEventListener('click', openSidebar);
+            $('sidebarClose').addEventListener('click', closeSidebar);
+            $('sidebarOverlay').addEventListener('click', closeSidebar);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') { closeModal();
+                    closeSidebar();
+                    $('paletteOverlay').classList.remove('show');
+                    $('gotoOverlay').classList.remove('show'); }
+            });
+
+            function renderAll() {
+                buildSidebar();
+                renderMessages();
+            }
+
+            // ===== 事件绑定 =====
+            document.getElementById('fileInput').addEventListener('change', function(e) {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+                importFiles(Array.from(files));
+                this.value = '';
+            });
+
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                if (allFileEntries.length === 0) {
+                    showToast('⚠️ 没有数据可导出');
+                    return;
+                }
+                const exportData = {
+                    version: '1.0',
+                    exportedAt: new Date().toISOString(),
+                    entries: allFileEntries.map(entry => ({
+                        name: entry.name,
+                        role: entry.role || '未分类',
+                        count: entry.count,
+                        messages: entry.messages.slice()
+                    }))
+                };
+                const data = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download =
+                    `sillytavern_${allFileEntries.length}个对话_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(`⬇️ 导出 ${allFileEntries.length} 个聊天对话`);
+            });
+
+            document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+            // ===== 右下角导航 =====
+            const navCorner = $('navCorner');
+            const gotoTopBtn = $('gotoTopBtn');
+            const gotoBottomBtn = $('gotoBottomBtn');
+            const gotoPageBtn = $('gotoPageBtn');
+            const gotoOverlay = $('gotoOverlay');
+            const gotoInput = $('gotoInput');
+            const gotoInfo = $('gotoInfo');
+            const gotoConfirmBtn = $('gotoConfirmBtn');
+            const gotoCancelBtn = $('gotoCancelBtn');
+
+            gotoTopBtn.addEventListener('click', function() {
+                const list = $('messageList');
+                if (list) {
+                    list.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+
+            gotoBottomBtn.addEventListener('click', function() {
+                const list = $('messageList');
+                if (list) {
+                    list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
+                }
+            });
+
+            gotoPageBtn.addEventListener('click', function() {
+                const filtered = getFilteredMessages();
+                const total = filtered.length;
+                const maxPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+                gotoInfo.textContent = `共 ${maxPage} 页，当前第 ${currentPage} 页`;
+                gotoInput.value = currentPage;
+                gotoInput.max = maxPage;
+                gotoInput.min = 1;
+                gotoOverlay.classList.add('show');
+                setTimeout(() => gotoInput.focus(), 100);
+            });
+
+            gotoConfirmBtn.addEventListener('click', function() {
+                const val = parseInt(gotoInput.value);
+                const filtered = getFilteredMessages();
+                const maxPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                if (isNaN(val) || val < 1 || val > maxPage) {
+                    showToast(`⚠️ 请输入 1 ~ ${maxPage} 之间的页码`);
+                    return;
+                }
+                goToPage(val);
+                gotoOverlay.classList.remove('show');
+            });
+
+            gotoCancelBtn.addEventListener('click', function() {
+                gotoOverlay.classList.remove('show');
+            });
+
+            gotoInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    gotoConfirmBtn.click();
+                }
+                if (e.key === 'Escape') {
+                    gotoOverlay.classList.remove('show');
+                }
+            });
+
+            gotoOverlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('show');
+                }
+            });
+
+            const messageList = $('messageList');
+            messageList.addEventListener('scroll', function() {
+                if (this.scrollTop > 300) {
+                    navCorner.classList.add('show');
+                } else {
+                    const filtered = getFilteredMessages();
+                    if (filtered.length > PAGE_SIZE) {
+                        // keep showing
+                    } else {
+                        navCorner.classList.remove('show');
+                    }
+                }
+            });
+
+            document.addEventListener('dragover', (e) => e.preventDefault());
+            document.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                const files = e.dataTransfer.files;
+                if (files.length === 0) return;
+                const validFiles = [];
+                for (const file of files) {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (['txt', 'json', 'jsonl'].includes(ext)) validFiles.push(file);
+                }
+                if (validFiles.length === 0) { showToast('⚠️ 没有支持的文件格式'); return; }
+                await importFiles(validFiles);
+            });
+
+            // ===== 启动 =====
+            async function init() {
+                try {
+                    await initDB();
+                    await loadChatFromDB();
+                    await loadThemesFromDB();
+
+                    const savedThemeId = await loadConfig('currentThemeId');
+                    if (savedThemeId !== null && themes.some(t => t.id === savedThemeId)) {
+                        applyTheme(savedThemeId);
+                    } else if (themes.length > 0) {
+                        applyTheme(themes[0].id);
+                    } else {
+                        const old = document.getElementById('theme-style');
+                        if (old) old.remove();
+                        currentThemeId = null;
+                        renderThemeList();
+                        applyNavButtonTheme(null);
+                    }
+
+                    currentPage = 1;
+                    renderAll();
+
+                    if (allMessages.length === 0) {
+                        showToast('📂 支持多选，可连续导入多个聊天记录文件', 3000);
+                    } else {
+                        showToast(`✅ 已加载 ${allFileEntries.length} 个聊天对话`, 2000);
+                    }
+                } catch (e) {
+                    console.error('初始化失败:', e);
+                    showToast('❌ 初始化失败: ' + e.message);
+                }
+            }
+
+            window.showDeleteModal = showDeleteModal;
+            window.applyFilter = applyFilter;
+            window.toggleGroup = toggleGroup;
+            window.toggleAllGroup = toggleAllGroup;
+            window._toggleThink = _toggleThink;
+
+            init();
+
+        })();
+    </script>
+</body>
+</html>
